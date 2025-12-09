@@ -4,6 +4,8 @@ import { GameState, Race, Class, GameLog, Attributes } from './types';
 import CharacterCreator from './components/CharacterCreator';
 import { getDMResponse } from './services/geminiService';
 
+const SAVE_KEY = 'chronicles-of-aetheria-save';
+
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -11,7 +13,52 @@ const App: React.FC = () => {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Save game state to localStorage
+  const saveGame = (state: GameState | null, choices: string[]) => {
+    if (state) {
+      const saveData = {
+        gameState: state,
+        currentChoices: choices,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    }
+  };
+
+  // Load game state from localStorage
+  const loadGame = (): { gameState: GameState; currentChoices: string[] } | null => {
+    try {
+      const saved = localStorage.getItem(SAVE_KEY);
+      if (saved) {
+        const saveData = JSON.parse(saved);
+        return {
+          gameState: saveData.gameState,
+          currentChoices: saveData.currentChoices || []
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load save:', error);
+    }
+    return null;
+  };
+
+  // Delete save
+  const deleteSave = () => {
+    localStorage.removeItem(SAVE_KEY);
+  };
+
+  // Note: We don't auto-load saves on mount - let the user choose via CharacterCreator
+
+  // Auto-save whenever game state changes
+  useEffect(() => {
+    if (gameState) {
+      saveGame(gameState, currentChoices);
+    }
+  }, [gameState, currentChoices]);
+
   const startNewGame = (name: string, race: Race, charClass: Class) => {
+    // Clear any existing save when starting a new game
+    deleteSave();
     const initialState: GameState = {
       character: {
         name,
@@ -146,8 +193,24 @@ const App: React.FC = () => {
     }
   }, [gameState?.history]);
 
+  const handleLoadSave = () => {
+    const saved = loadGame();
+    if (saved) {
+      setGameState(saved.gameState);
+      setCurrentChoices(saved.currentChoices);
+    }
+  };
+
+  const handleNewGame = () => {
+    if (confirm('Start a new game? This will delete your current save.')) {
+      deleteSave();
+      setGameState(null);
+      setCurrentChoices([]);
+    }
+  };
+
   if (!gameState) {
-    return <CharacterCreator onComplete={startNewGame} />;
+    return <CharacterCreator onComplete={startNewGame} onLoadSave={handleLoadSave} />;
   }
 
   const { character, history, worldMemory, isGameOver } = gameState;
@@ -195,8 +258,17 @@ const App: React.FC = () => {
              </div>
           )}
         </div>
-        <div className="flex items-center justify-end font-mono text-amber-500 text-sm drop-shadow-sm">
-          🪙 {character.gold}
+        <div className="flex items-center justify-end gap-3">
+          <div className="font-mono text-amber-500 text-sm drop-shadow-sm">
+            🪙 {character.gold}
+          </div>
+          <button
+            onClick={handleNewGame}
+            className="text-[10px] text-stone-500 hover:text-stone-300 px-2 py-1 rounded border border-stone-700 hover:border-stone-600 transition-all"
+            title="Start a new game"
+          >
+            🆕 New Game
+          </button>
         </div>
       </div>
 
@@ -245,7 +317,9 @@ const App: React.FC = () => {
                <div className="py-20 text-center animate-pulse">
                  <h2 className="text-5xl text-red-600 fantasy-font mb-4">You have perished.</h2>
                  <p className="text-stone-500 mb-8">Even God makes mistakes twice.</p>
-                 <button onClick={() => window.location.reload()} className="bg-stone-800 hover:bg-stone-700 text-white px-10 py-3 rounded-full uppercase text-xs tracking-[0.2em] transition-all border border-stone-600 shadow-lg shadow-red-900/20">Reincarnate Again</button>
+                 <div className="flex gap-4 justify-center">
+                   <button onClick={() => { deleteSave(); window.location.reload(); }} className="bg-stone-800 hover:bg-stone-700 text-white px-10 py-3 rounded-full uppercase text-xs tracking-[0.2em] transition-all border border-stone-600 shadow-lg shadow-red-900/20">Reincarnate Again</button>
+                 </div>
                </div>
             )}
           </div>
