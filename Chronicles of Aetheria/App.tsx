@@ -285,9 +285,9 @@ const App: React.FC = () => {
               ))}
             </div>
           </div>
-          <div className="bg-stone-900/80 border border-stone-800 rounded-xl p-4">
-            <h3 className="text-amber-600 text-[10px] font-black uppercase tracking-[0.3em] mb-3">🎒 Inventory</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="flex-1 bg-stone-900/80 border border-stone-800 rounded-xl p-4 flex flex-col min-h-0">
+            <h3 className="text-amber-600 text-[10px] font-black uppercase tracking-[0.3em] mb-3 border-b border-stone-800 pb-2 flex-shrink-0">🎒 Inventory</h3>
+            <div className="flex flex-wrap gap-2 overflow-y-auto min-h-0">
               {character.inventory.length > 0 ? character.inventory.map((item, i) => (
                 <span key={i} className="text-[10px] bg-stone-800 text-stone-300 px-2 py-1 rounded border border-stone-700">{item}</span>
               )) : <span className="text-[10px] text-stone-600 italic">Empty bags...</span>}
